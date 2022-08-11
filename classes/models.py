@@ -1,32 +1,15 @@
-import json
+import logging
 import time
-import uuid
-import zlib
-
-import zpaq
 from config import paths
 from peewee import *
-from playhouse.fields import CompressedField
 from playhouse.sqlite_ext import JSONField, SqliteExtDatabase
 
 db = SqliteExtDatabase(paths.DB_FILE)
 
-# import logging
+
 # logger = logging.getLogger("peewee")
 # logger.setLevel(logging.DEBUG)
 # logger.addHandler(logging.StreamHandler())
-
-
-class CustomField(BlobField):
-    """https://gist.github.com/rosscdh/f4f26758b0228f475b132c688f15af2b"""
-
-    def db_value(self, value):
-        return zpaq.compress(json.dumps(value).encode()) if value else None
-        # return value if value is None else json.dumps(value)
-
-    def python_value(self, value):
-        return json.loads(zpaq.decompress(value)) if value else None
-        # return value if value is None else json.loads(value)
 
 
 class BaseModel(Model):
@@ -35,14 +18,13 @@ class BaseModel(Model):
 
 
 class Battle(BaseModel):
-    # id = CharField(primary_key=True, default=lambda: uuid.uuid4().hex)
     id = AutoField()
 
     created = FloatField(default=time.time)
-    type = CharField(null=True)
-    rounds = IntegerField(null=True)
     active = BooleanField()
     meta = JSONField(null=True)
+
+    _key_map = JSONField(default=list)
 
 
 # No unique constraint on (idx, battle) because peewee doesnt like composite keys
@@ -65,5 +47,24 @@ class Event(BaseModel):
     turn = ForeignKeyField(Turn, backref="events")
     battle = ForeignKeyField(Battle, backref="events")
 
+    _parsed_data = None
 
-db.create_tables([Battle, Turn, Event])
+    @property
+    def parsed_data(self):
+        if self._parsed_data is None:
+            self._parsed_data = {
+                self.battle._key_map[int(i)]: v for i, v in self.data.items()
+            }
+        return self._parsed_data
+
+
+class BattleReport(BaseModel):
+    id = AutoField()
+
+    type = CharField()
+    data = JSONField()
+
+    battle = ForeignKeyField(Battle, backref="reports")
+
+
+db.create_tables([Battle, Turn, Event, BattleReport])

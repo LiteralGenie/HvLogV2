@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from classes.models import Battle, Event, Turn
+from classes.models import Battle, BattleReport, Event, Turn
 from config import paths
 from utils.parse import parse_events
 
@@ -54,10 +54,10 @@ def post_logs(turn_logs: list[RawTurnLog]):
     if active_battle is None:
         active_battle = Battle.create(active=True)
 
-        if round_start:
-            active_battle.update(
-                type=round_start["event_type"], rounds=round_start["max"]
-            ).execute()
+    # Get latest battle info
+    active_battle_report = (
+        BattleReport.select().join(Battle).where(Battle.id == active_battle.id).first()
+    )
 
     # Check if logs are for new battle
     if round_start:
@@ -71,22 +71,42 @@ def post_logs(turn_logs: list[RawTurnLog]):
                 .order_by(Event.idx.desc())
                 .first()
             )
-            last_round: int = ev.data["current"] if ev else float("inf")
+            last_round: int = ev.parsed_data["current"] if ev else float("inf")
 
             return current < last_round
 
-        is_different_type = round_start["battle_type"] != active_battle.type
-        is_different_round_max = round_start["max"] != active_battle.rounds
+        is_different_type = (
+            active_battle_report
+            and round_start["battle_type"] != active_battle_report.type
+        )
+        is_different_round_max = (
+            active_battle_report
+            and round_start["max"] != active_battle_report.data["rounds"]
+        )
+
         if (
             is_different_type
             or is_different_round_max
             or is_earlier_round(round_start["current"])
         ):
             active_battle.update(active=False).execute()
-            active_battle = active_battle.create(
-                type=round_start["battle_type"],
-                rounds=round_start["max"],
-                active=True,
+            active_battle = Battle.create(active=True)
+
+            active_battle_report = BattleReport.create(
+                type="meta",
+                data=dict(
+                    battle_type=round_start["battle_type"],
+                    rounds=round_start["max"],
+                ),
+                battle=active_battle,
+            )
+        elif active_battle_report is None:
+            active_battle_report = BattleReport.create(
+                type="meta",
+                data=dict(
+                    battle_type=round_start["event_type"], rounds=round_start["max"]
+                ),
+                battle=active_battle,
             )
 
     # Get largest turn index
@@ -127,11 +147,18 @@ def post_logs(turn_logs: list[RawTurnLog]):
             )
             current_turn_idx = turn_idx
 
+        # Compress data
+        for k in event.keys():
+            if k not in active_battle._key_map:
+                active_battle._key_map.append(k)
+                active_battle.save()
+        event_data = {active_battle._key_map.index(k): v for k, v in event.items()}
+
         # Append
         ev = Event.create(
             idx=last_ev_idx + 1,
             type=event["event_type"],
-            data=event,
+            data=event_data,
             turn=current_turn,
             battle=active_battle,
         )

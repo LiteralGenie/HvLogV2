@@ -10,7 +10,7 @@ export class EventParser {
         this.types = types
         this.groupCount = (new RegExp(this.patt.toString() + '|')).exec('').length - 1;
 
-        if (this.groupCount !== this.types.length) throw Error()
+        if (this.groupCount !== this.types.length) throw Error(this.name)
     }
 
     parse(line: string) {
@@ -33,46 +33,47 @@ const Float = (name) => Group(name, '\\d+(?:\\.\\d*)?')
 const Mult = (...args) => Group('multiplier_type', args.join('|'))
 const Num = (name) => Group(name, '\\d+?')
 const Word = (name) => Group(name, '[\\w\\s-]+')
+const Words = (name) => Group(name, '[\\w\\s- ]+')
 
 const Resist = "(?: \\\((?<resist>\d+)% resisted\\\))?"
-const EnemySpell = `${Word('monster')} ${Group('spell_type', 'casts|uses')} ${Word('skill')}`
+const EnemySpell = `${Words('monster')} ${Group('spell_type', 'casts|uses')} ${Words('skill')}`
 
 export const PARSERS: {[id: string]: EventParser} = {
     // Actions
     PLAYER_BASIC: new EventParser(
         'PLAYER_BASIC',
-        `${Word('name')} ${Mult('hits', 'crits')} (?!you)${Word('monster')} for ${Num('value')} ${Word('damage_type')} damage\\.`,
+        `${Words('spell')} ${Mult('hits', 'crits')} (?!you)${Words('monster')} for ${Num('value')} ${Word('damage_type')} damage\\.`,
         [String, String, String, Number, String]
     ),
     PLAYER_MISS: new EventParser(
         'PLAYER_MISS',
-        `${Word('monster')} ${Mult('parries')} your attack.`, 
+        `${Words('monster')} ${Mult('parries')} your attack.`, 
         [String, String]
     ),
     PLAYER_ITEM: new EventParser(
         'PLAYER_ITEM',
-        `You use ${Word('name')}\\.`, 
+        `You use ${Words('item')}\\.`, 
         [String]
     ),
     PLAYER_SKILL: new EventParser(
         'PLAYER_SKILL',
-        `You cast ${Word('name')}\\.`, 
+        `You cast ${Words('spell')}\\.`, 
         [String]
     ),
     PLAYER_DODGE: new EventParser(
         'PLAYER_DODGE',
-        `You ${Mult('evade', 'parry')} the attack from ${Word('monster')}\\.`, 
+        `You ${Mult('evade', 'parry')} the attack from ${Words('monster')}\\.`, 
         [String, String]
     ),
     
     ENEMY_BASIC: new EventParser(
         'ENEMY_BASIC',
-        `${Word('monster')} ${Mult('hits', 'crits')} you for ${Num('value')} ${Word('damage_type')} damage\\.`, 
+        `${Words('monster')} ${Mult('hits', 'crits')} you for ${Num('value')} ${Word('damage_type')} damage\\.`, 
         [String, String, Number, String]
     ),
     ENEMY_SKILL_ABSORB: new EventParser(
         'ENEMY_SKILL_ABSORB',
-        `${EnemySpell}, but is ${Mult('absorb')}ed\\. You gain ${Word('mana')}`, 
+        `${EnemySpell}, but is ${Mult('absorb')}ed\\. You gain ${Word('mp')}`, 
         [String, String, String, String, String]
     ),
     ENEMY_SKILL_MISS: new EventParser(
@@ -89,12 +90,12 @@ export const PARSERS: {[id: string]: EventParser} = {
     // Effects
     PLAYER_BUFF: new EventParser(
         'PLAYER_BUFF',
-        `You gain the effect ${Word('name')}\\.`, 
+        `You gain the effect ${Words('effect')}\\.`, 
         [String]
     ),
-    PLAYER_SKILL_DAMAGE: new EventParser(
-        'PLAYER_SKILL_DAMAGE',
-        `${Word('name')} ${Mult('hits', 'blasts')} ${Word('monster')} for ${Num('value')} ${Word('damage_type')} damage${Resist}`, 
+    PLAYER_SPELL_DAMAGE: new EventParser(
+        'PLAYER_SPELL_DAMAGE',
+        `${Words('spell')} ${Mult('hits', 'blasts')} ${Words('monster')} for ${Num('value')}(?: ${Word('damage_type')})? damage${Resist}`, 
         [String, String, String, Number, String, Number]
     ),
     RIDDLE_RESTORE: new EventParser(
@@ -104,7 +105,7 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     EFFECT_RESTORE: new EventParser(
         'EFFECT_RESTORE',
-        `${Word('name')} restores ${Num('value')} points of ${Word('type')}\\.`, 
+        `${Words('effect')} restores ${Num('value')} points of ${Word('type')}\\.`, 
         [String, Number, String]
     ),
     ITEM_RESTORE: new EventParser(
@@ -130,25 +131,40 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     DISPEL: new EventParser(
         'DISPEL',
-        `The effect ${Word('name')} was dispelled\\.`, 
+        `The effect ${Words('effect')} was dispelled\\.`, 
         [String]
     ),
     COOLDOWN_EXPIRE: new EventParser(
         'COOLDOWN_EXPIRE',
-        `Cooldown expired for ${Word('name')}`, 
+        `Cooldown expired for ${Words('spell')}`, 
         [String]
+    ),
+    BUFF_EXPIRE: new EventParser(
+        'DEBUFF_EXPIRE',
+        `The effect ${Words('effect')} has expired\\.`, 
+        [String]
+    ),
+    RESIST: new EventParser(
+        'RESIST',
+        `${Words('monster')} resists your spell\\.`, 
+        [String]
+    ),
+    DEBUFF: new EventParser(
+        'DEBUFF',
+        `${Words('monster')} gains the effect ${Words('name')}\\.`, 
+        [String, String]
     ),
     DEBUFF_EXPIRE: new EventParser(
         'DEBUFF_EXPIRE',
-        `The effect ${Word('name')} has expired\\.`, 
-        [String]
+        `The effect ${Words('effect')} on ${Words('monster')} has expired\\.`, 
+        [String, String]
     ),
 
     // Info
     ROUND_END: new EventParser(
         'ROUND_END',
-        `${Word('monster')} resists your spell\\.`, 
-        [String]
+        `You are Victorious!`, 
+        []
     ),
     ROUND_START: new EventParser(
         'ROUND_START',
@@ -157,64 +173,63 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     SPAWN: new EventParser(
         'SPAWN',
-        `Spawned Monster ${Group('letter', '[A-Z]')}: MID=${Num('mid')} \\\(${Word('monster')}\\\) LV=${Num('level')} HP=${Num('hp')}`, 
+        `Spawned Monster ${Group('letter', '[A-Z]')}: MID=${Num('mid')} \\\(${Words('monster')}\\\) LV=${Num('level')} HP=${Num('hp')}`, 
         [String, Number, String, Number, Number]
     ),
     DEATH: new EventParser(
         'DEATH',
-        `${Word('monster')} has been defeated\\.`, 
+        `${Words('monster')} has been defeated\\.`, 
         [String]
     ),
 
     GEM: new EventParser(
         'GEM',
-        `${Word('monster')} drops a ${Word('type')} Gem powerup!`, 
+        `${Words('monster')} drops a ${Word('type')} Gem powerup!`, 
         [String, String]
     ),
-    DROP: new EventParser(
-        'DROP',
+    CREDITS: new EventParser(
+        'CREDITS',
         `You gain ${Num('value')} Credits!`, 
         [Number]
     ),
-    PROFICIENCY: new EventParser(
-        'PROFICIENCY',
-        `${Word('monster')} dropped \\[${Group('item', '.*')}\\]`, 
+    DROP: new EventParser(
+        'DROP',
+        `${Words('monster')} dropped \\[${Group('item', '.*')}\\]`, 
         [String, String]
     ),
-    EXPERIENCE: new EventParser(
-        'EXPERIENCE',
+    PROFICIENCY: new EventParser(
+        'PROFICIENCY',
         `You gain $${Float('value')} points of $${Word('type')} proficiency\\.`, 
         [Number, String]
     ),
-    AUTO_SALVAGE: new EventParser(
-        'AUTO_SALVAGE',
-        `You gain $${Num('value')} EXP!`, 
+    EXPERIENCE: new EventParser(
+        'EXPERIENCE',
+        `You gain ${Num('value')} EXP!`, 
         [Number]
     ),
+    AUTO_SALVAGE: new EventParser(
+        'AUTO_SALVAGE',
+        `A traveling salesmoogle salvages it into ${Num('value')}x \\[${Words('item')}\\]`, 
+        [Number, String]
+    ),    
     AUTO_SELL: new EventParser(
         'AUTO_SELL',
-        `A traveling salesmoogle salvages it into $${Num('value')}x \\[${Word('item')}\\]`, 
-        [Number, String]
-    ),
-    
-    GRINDFEST_CREDITS: new EventParser(
-        'GRINDFEST_CREDITS',
         `A traveling salesmoogle gives you \\[${Num('value')} Credits\\] for it\\.`, 
         [Number]
     ),
     CLEAR_BONUS: new EventParser(
         'CLEAR_BONUS',
-        `Battle Clear Bonus! \\[${Word('item')}\\]`, 
+        `Battle Clear Bonus! \\[${Words('item')}\\]`, 
         [String]
     ),
     TOKEN_BONUS: new EventParser(
         'TOKEN_BONUS',
-        `Arena Token Bonus! \\[${Word('item')}\\]`, 
+        `Arena Token Bonus! \\[${Words('item')}\\]`, 
         [String]
     ),
     EVENT_ITEM: new EventParser(
         'EVENT_ITEM',
-        `You found a \\[${Word('item')}\\]`, 
+        `You found a \\[${Words('item')}\\]`, 
         [String]
     ),
 
