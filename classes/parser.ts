@@ -34,20 +34,21 @@ const Mult = (...args) => Group('multiplier_type', args.join('|'))
 const Num = (name) => Group(name, '\\d+?')
 const Word = (name) => Group(name, '[\\w\\s-]+')
 const Words = (name) => Group(name, '[\\w\\s- ]+')
+const Monster = () => Group('monster', '[\\w\\s-+]+') // "New Game +" is a valid monster name
 
 const Resist = "(?: \\\((?<resist>\d+)% resisted\\\))?"
-const EnemySpell = `${Words('monster')} ${Group('spell_type', 'casts|uses')} ${Words('skill')}`
+const EnemySpell = `${Monster()} ${Group('spell_type', 'casts|uses')} ${Words('skill')}`
 
 export const PARSERS: {[id: string]: EventParser} = {
     // Actions
     PLAYER_BASIC: new EventParser(
         'PLAYER_BASIC',
-        `${Words('spell')} ${Mult('hits', 'crits')} (?!you)${Words('monster')} for ${Num('value')} ${Word('damage_type')} damage\\.`,
+        `${Words('spell')} ${Mult('hits', 'crits')} (?!you)${Monster()} for ${Num('value')} ${Word('damage_type')} damage\\.`,
         [String, String, String, Number, String]
     ),
     PLAYER_MISS: new EventParser(
         'PLAYER_MISS',
-        `${Words('monster')} ${Mult('parries')} your attack.`, 
+        `${Monster()} ${Mult('parries')} your attack.`, 
         [String, String]
     ),
     PLAYER_ITEM: new EventParser(
@@ -62,13 +63,13 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     PLAYER_DODGE: new EventParser(
         'PLAYER_DODGE',
-        `You ${Mult('evade', 'parry')} the attack from ${Words('monster')}\\.`, 
+        `You ${Mult('evade', 'parry')} the attack from ${Monster()}\\.`, 
         [String, String]
     ),
     
     ENEMY_BASIC: new EventParser(
         'ENEMY_BASIC',
-        `${Words('monster')} ${Mult('hits', 'crits')} you for ${Num('value')} ${Word('damage_type')} damage\\.`, 
+        `${Monster()} ${Mult('hits', 'crits')} you for ${Num('value')} ${Word('damage_type')} damage\\.`, 
         [String, String, Number, String]
     ),
     ENEMY_SKILL_ABSORB: new EventParser(
@@ -95,13 +96,13 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     PLAYER_SPELL_DAMAGE: new EventParser(
         'PLAYER_SPELL_DAMAGE',
-        `${Words('spell')} ${Mult('hits', 'blasts')} ${Words('monster')} for ${Num('value')}(?: ${Word('damage_type')})? damage${Resist}`, 
+        `${Words('spell')} ${Mult('hits', 'blasts')} ${Monster()} for ${Num('value')}(?: ${Word('damage_type')})? damage${Resist}`, 
         [String, String, String, Number, String, Number]
     ),
     RIDDLE_RESTORE: new EventParser(
         'RIDDLE_RESTORE',
-        `Time Bonus: recovered ${Num('hp')} HP and ${Num('mp')} MP\\.`, 
-        [Number, Number]
+        `Time Bonus: Recovered ${Num('hp')} HP, ${Num('mp')} MP and ${Num('sp')} SP\\.`, 
+        [Number, Number, Number]
     ),
     EFFECT_RESTORE: new EventParser(
         'EFFECT_RESTORE',
@@ -146,45 +147,55 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     RESIST: new EventParser(
         'RESIST',
-        `${Words('monster')} resists your spell\\.`, 
+        `${Monster()} resists your spell\\.`, 
         [String]
     ),
     DEBUFF: new EventParser(
         'DEBUFF',
-        `${Words('monster')} gains the effect ${Words('name')}\\.`, 
+        `${Monster()} gains the effect ${Words('name')}\\.`, 
         [String, String]
     ),
     DEBUFF_EXPIRE: new EventParser(
         'DEBUFF_EXPIRE',
-        `The effect ${Words('effect')} on ${Words('monster')} has expired\\.`, 
+        `The effect ${Words('effect')} on ${Monster()} has expired\\.`, 
         [String, String]
     ),
 
     // Info
-    ROUND_END: new EventParser(
-        'ROUND_END',
-        `You are Victorious!`, 
-        []
-    ),
     ROUND_START: new EventParser(
         'ROUND_START',
         `Initializing ${Group('battle_type', '[\\w\\s\\d#]+')} \\\(Round ${Num('current')} / ${Num('max')}\\\) \\.\\.\\.`, 
         [String, Number, Number]
     ),
+    ROUND_END: new EventParser(
+        'ROUND_END',
+        `You are Victorious!`, 
+        []
+    ),
+    FLEE: new EventParser(
+        'FLEE',
+        'You have escaped from the battle\\.',
+        []
+    ),
     SPAWN: new EventParser(
         'SPAWN',
-        `Spawned Monster ${Group('letter', '[A-Z]')}: MID=${Num('mid')} \\\(${Words('monster')}\\\) LV=${Num('level')} HP=${Num('hp')}`, 
+        `Spawned Monster ${Group('letter', '[A-Z]')}: MID=${Num('mid')} \\\(${Monster()}\\\) LV=${Num('level')} HP=${Num('hp')}`, 
         [String, Number, String, Number, Number]
     ),
     DEATH: new EventParser(
         'DEATH',
-        `${Words('monster')} has been defeated\\.`, 
+        `${Monster()} has been defeated\\.`, 
         [String]
+    ),
+    RIDDLE_MASTER: new EventParser(
+        'RIDDLE_MASTER',
+        `The Riddlemaster listens.*`,
+        []
     ),
 
     GEM: new EventParser(
         'GEM',
-        `${Words('monster')} drops a ${Word('type')} Gem powerup!`, 
+        `${Monster()} drops a ${Word('type')} Gem powerup!`, 
         [String, String]
     ),
     CREDITS: new EventParser(
@@ -194,12 +205,12 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     DROP: new EventParser(
         'DROP',
-        `${Words('monster')} dropped \\[${Group('item', '.*')}\\]`, 
+        `${Monster()} dropped \\[${Group('item', '.*')}\\]`, 
         [String, String]
     ),
     PROFICIENCY: new EventParser(
         'PROFICIENCY',
-        `You gain $${Float('value')} points of $${Word('type')} proficiency\\.`, 
+        `You gain $${Float('value')} points of ${Words('type')} proficiency\\.`, 
         [Number, String]
     ),
     EXPERIENCE: new EventParser(

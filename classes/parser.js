@@ -39,23 +39,24 @@ var Mult = function () {
 var Num = function (name) { return Group(name, '\\d+?'); };
 var Word = function (name) { return Group(name, '[\\w\\s-]+'); };
 var Words = function (name) { return Group(name, '[\\w\\s- ]+'); };
+var Monster = function () { return Group('monster', '[\\w\\s-+]+'); }; // "New Game +" is a valid monster name
 var Resist = "(?: \\\((?<resist>\d+)% resisted\\\))?";
-var EnemySpell = "".concat(Words('monster'), " ").concat(Group('spell_type', 'casts|uses'), " ").concat(Words('skill'));
+var EnemySpell = "".concat(Monster(), " ").concat(Group('spell_type', 'casts|uses'), " ").concat(Words('skill'));
 exports.PARSERS = {
     // Actions
-    PLAYER_BASIC: new EventParser('PLAYER_BASIC', "".concat(Words('spell'), " ").concat(Mult('hits', 'crits'), " (?!you)").concat(Words('monster'), " for ").concat(Num('value'), " ").concat(Word('damage_type'), " damage\\."), [String, String, String, Number, String]),
-    PLAYER_MISS: new EventParser('PLAYER_MISS', "".concat(Words('monster'), " ").concat(Mult('parries'), " your attack."), [String, String]),
+    PLAYER_BASIC: new EventParser('PLAYER_BASIC', "".concat(Words('spell'), " ").concat(Mult('hits', 'crits'), " (?!you)").concat(Monster(), " for ").concat(Num('value'), " ").concat(Word('damage_type'), " damage\\."), [String, String, String, Number, String]),
+    PLAYER_MISS: new EventParser('PLAYER_MISS', "".concat(Monster(), " ").concat(Mult('parries'), " your attack."), [String, String]),
     PLAYER_ITEM: new EventParser('PLAYER_ITEM', "You use ".concat(Words('item'), "\\."), [String]),
     PLAYER_SKILL: new EventParser('PLAYER_SKILL', "You cast ".concat(Words('spell'), "\\."), [String]),
-    PLAYER_DODGE: new EventParser('PLAYER_DODGE', "You ".concat(Mult('evade', 'parry'), " the attack from ").concat(Words('monster'), "\\."), [String, String]),
-    ENEMY_BASIC: new EventParser('ENEMY_BASIC', "".concat(Words('monster'), " ").concat(Mult('hits', 'crits'), " you for ").concat(Num('value'), " ").concat(Word('damage_type'), " damage\\."), [String, String, Number, String]),
+    PLAYER_DODGE: new EventParser('PLAYER_DODGE', "You ".concat(Mult('evade', 'parry'), " the attack from ").concat(Monster(), "\\."), [String, String]),
+    ENEMY_BASIC: new EventParser('ENEMY_BASIC', "".concat(Monster(), " ").concat(Mult('hits', 'crits'), " you for ").concat(Num('value'), " ").concat(Word('damage_type'), " damage\\."), [String, String, Number, String]),
     ENEMY_SKILL_ABSORB: new EventParser('ENEMY_SKILL_ABSORB', "".concat(EnemySpell, ", but is ").concat(Mult('absorb'), "ed\\. You gain ").concat(Word('mp')), [String, String, String, String, String]),
     ENEMY_SKILL_MISS: new EventParser('ENEMY_SKILL_MISS', "".concat(EnemySpell, "\\. You ").concat(Mult('evade', 'parry'), " the attack\\."), [String, String, String, String]),
     ENEMY_SKILL_SUCCESS: new EventParser('ENEMY_SKILL_SUCCESS', "".concat(EnemySpell, ", and ").concat(Mult('hits', 'crits'), " you for ").concat(Num('value'), " ").concat(Word('damage_type'), " damage").concat(Resist, "\\.?"), [String, String, String, String, Number, String, Number]),
     // Effects
     PLAYER_BUFF: new EventParser('PLAYER_BUFF', "You gain the effect ".concat(Words('effect'), "\\."), [String]),
-    PLAYER_SPELL_DAMAGE: new EventParser('PLAYER_SPELL_DAMAGE', "".concat(Words('spell'), " ").concat(Mult('hits', 'blasts'), " ").concat(Words('monster'), " for ").concat(Num('value'), "(?: ").concat(Word('damage_type'), ")? damage").concat(Resist), [String, String, String, Number, String, Number]),
-    RIDDLE_RESTORE: new EventParser('RIDDLE_RESTORE', "Time Bonus: recovered ".concat(Num('hp'), " HP and ").concat(Num('mp'), " MP\\."), [Number, Number]),
+    PLAYER_SPELL_DAMAGE: new EventParser('PLAYER_SPELL_DAMAGE', "".concat(Words('spell'), " ").concat(Mult('hits', 'blasts'), " ").concat(Monster(), " for ").concat(Num('value'), "(?: ").concat(Word('damage_type'), ")? damage").concat(Resist), [String, String, String, Number, String, Number]),
+    RIDDLE_RESTORE: new EventParser('RIDDLE_RESTORE', "Time Bonus: Recovered ".concat(Num('hp'), " HP, ").concat(Num('mp'), " MP and ").concat(Num('sp'), " SP\\."), [Number, Number, Number]),
     EFFECT_RESTORE: new EventParser('EFFECT_RESTORE', "".concat(Words('effect'), " restores ").concat(Num('value'), " points of ").concat(Word('type'), "\\."), [String, Number, String]),
     ITEM_RESTORE: new EventParser('ITEM_RESTORE', "Recovered ".concat(Num('value'), " points of ").concat(Word('type'), "\\."), [Number, String]),
     CURE_RESTORE: new EventParser('CURE_RESTORE', "You are healed for ".concat(Num('value'), " Health Points\\."), [Number]),
@@ -64,18 +65,20 @@ exports.PARSERS = {
     DISPEL: new EventParser('DISPEL', "The effect ".concat(Words('effect'), " was dispelled\\."), [String]),
     COOLDOWN_EXPIRE: new EventParser('COOLDOWN_EXPIRE', "Cooldown expired for ".concat(Words('spell')), [String]),
     BUFF_EXPIRE: new EventParser('DEBUFF_EXPIRE', "The effect ".concat(Words('effect'), " has expired\\."), [String]),
-    RESIST: new EventParser('RESIST', "".concat(Words('monster'), " resists your spell\\."), [String]),
-    DEBUFF: new EventParser('DEBUFF', "".concat(Words('monster'), " gains the effect ").concat(Words('name'), "\\."), [String, String]),
-    DEBUFF_EXPIRE: new EventParser('DEBUFF_EXPIRE', "The effect ".concat(Words('effect'), " on ").concat(Words('monster'), " has expired\\."), [String, String]),
+    RESIST: new EventParser('RESIST', "".concat(Monster(), " resists your spell\\."), [String]),
+    DEBUFF: new EventParser('DEBUFF', "".concat(Monster(), " gains the effect ").concat(Words('name'), "\\."), [String, String]),
+    DEBUFF_EXPIRE: new EventParser('DEBUFF_EXPIRE', "The effect ".concat(Words('effect'), " on ").concat(Monster(), " has expired\\."), [String, String]),
     // Info
-    ROUND_END: new EventParser('ROUND_END', "You are Victorious!", []),
     ROUND_START: new EventParser('ROUND_START', "Initializing ".concat(Group('battle_type', '[\\w\\s\\d#]+'), " \\(Round ").concat(Num('current'), " / ").concat(Num('max'), "\\) \\.\\.\\."), [String, Number, Number]),
-    SPAWN: new EventParser('SPAWN', "Spawned Monster ".concat(Group('letter', '[A-Z]'), ": MID=").concat(Num('mid'), " \\(").concat(Words('monster'), "\\) LV=").concat(Num('level'), " HP=").concat(Num('hp')), [String, Number, String, Number, Number]),
-    DEATH: new EventParser('DEATH', "".concat(Words('monster'), " has been defeated\\."), [String]),
-    GEM: new EventParser('GEM', "".concat(Words('monster'), " drops a ").concat(Word('type'), " Gem powerup!"), [String, String]),
+    ROUND_END: new EventParser('ROUND_END', "You are Victorious!", []),
+    FLEE: new EventParser('FLEE', 'You have escaped from the battle\\.', []),
+    SPAWN: new EventParser('SPAWN', "Spawned Monster ".concat(Group('letter', '[A-Z]'), ": MID=").concat(Num('mid'), " \\(").concat(Monster(), "\\) LV=").concat(Num('level'), " HP=").concat(Num('hp')), [String, Number, String, Number, Number]),
+    DEATH: new EventParser('DEATH', "".concat(Monster(), " has been defeated\\."), [String]),
+    RIDDLE_MASTER: new EventParser('RIDDLE_MASTER', "The Riddlemaster listens.*", []),
+    GEM: new EventParser('GEM', "".concat(Monster(), " drops a ").concat(Word('type'), " Gem powerup!"), [String, String]),
     CREDITS: new EventParser('CREDITS', "You gain ".concat(Num('value'), " Credits!"), [Number]),
-    DROP: new EventParser('DROP', "".concat(Words('monster'), " dropped \\[").concat(Group('item', '.*'), "\\]"), [String, String]),
-    PROFICIENCY: new EventParser('PROFICIENCY', "You gain $".concat(Float('value'), " points of $").concat(Word('type'), " proficiency\\."), [Number, String]),
+    DROP: new EventParser('DROP', "".concat(Monster(), " dropped \\[").concat(Group('item', '.*'), "\\]"), [String, String]),
+    PROFICIENCY: new EventParser('PROFICIENCY', "You gain $".concat(Float('value'), " points of ").concat(Words('type'), " proficiency\\."), [Number, String]),
     EXPERIENCE: new EventParser('EXPERIENCE', "You gain ".concat(Num('value'), " EXP!"), [Number]),
     AUTO_SALVAGE: new EventParser('AUTO_SALVAGE', "A traveling salesmoogle salvages it into ".concat(Num('value'), "x \\[").concat(Words('item'), "\\]"), [Number, String]),
     AUTO_SELL: new EventParser('AUTO_SELL', "A traveling salesmoogle gives you \\[".concat(Num('value'), " Credits\\] for it\\."), [Number]),
