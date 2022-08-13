@@ -1,4 +1,5 @@
 fastapi
 javascript
 peewee
+pyzpaq
 uvicorn

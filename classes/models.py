@@ -1,8 +1,11 @@
+import json
 import logging
 import time
 from config import paths
 from peewee import *
 from playhouse.sqlite_ext import JSONField, SqliteExtDatabase
+import uuid
+import zpaq
 
 db = SqliteExtDatabase(paths.DB_FILE)
 
@@ -12,54 +15,40 @@ db = SqliteExtDatabase(paths.DB_FILE)
 # logger.addHandler(logging.StreamHandler())
 
 
+class CompressedJsonField(BlobField):
+    def db_value(self, value: dict | list):
+        return zpaq.compress(json.dumps(value).encode())
+
+    def python_value(self, value):
+        return json.loads(zpaq.decompress(value))
+
+
 class BaseModel(Model):
     class Meta:
         database = db
 
 
 class Battle(BaseModel):
-    id = AutoField()
+    pk = CharField(default=lambda: uuid.uuid4().hex)
+    idx = CharField(default=lambda: uuid.uuid4().hex)
 
-    created = FloatField(default=time.time)
     active = BooleanField()
+    created = FloatField(default=time.time)
+    data = CompressedJsonField(default=list)
     meta = JSONField(null=True)
 
-    _key_map = JSONField(default=list)
 
+class ActiveBattleTurn(BaseModel):
+    pk = AutoField()
 
-# No unique constraint on (idx, battle) because peewee doesnt like composite keys
-class Turn(BaseModel):
-    idx = IntegerField()
-
-    time = FloatField(null=True)
+    events = JSONField()
     meta = JSONField(null=True)
 
     battle = ForeignKeyField(Battle, backref="turns")
 
 
-# No unique constraint on (idx, turn) because peewee doesnt like composite keys
-class Event(BaseModel):
-    idx = IntegerField()
-
-    type = CharField()
-    data = JSONField()
-
-    turn = ForeignKeyField(Turn, backref="events")
-    battle = ForeignKeyField(Battle, backref="events")
-
-    _parsed_data = None
-
-    @property
-    def parsed_data(self):
-        if self._parsed_data is None:
-            self._parsed_data = {
-                self.battle._key_map[int(i)]: v for i, v in self.data.items()
-            }
-        return self._parsed_data
-
-
 class BattleReport(BaseModel):
-    id = AutoField()
+    pk = AutoField()
 
     type = CharField()
     data = JSONField()
@@ -67,4 +56,4 @@ class BattleReport(BaseModel):
     battle = ForeignKeyField(Battle, backref="reports")
 
 
-db.create_tables([Battle, Turn, Event, BattleReport])
+db.create_tables([Battle, ActiveBattleTurn, BattleReport])
