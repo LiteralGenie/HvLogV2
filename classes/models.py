@@ -1,6 +1,4 @@
 import json
-import logging
-import time
 from config import paths
 from peewee import *
 from playhouse.sqlite_ext import JSONField, SqliteExtDatabase
@@ -9,7 +7,7 @@ import zpaq
 
 db = SqliteExtDatabase(paths.DB_FILE)
 
-
+# import logging
 # logger = logging.getLogger("peewee")
 # logger.setLevel(logging.DEBUG)
 # logger.addHandler(logging.StreamHandler())
@@ -30,20 +28,20 @@ class BaseModel(Model):
 
 class Battle(BaseModel):
     pk = CharField(default=lambda: uuid.uuid4().hex)
-    idx = CharField(default=lambda: uuid.uuid4().hex)
 
     active = BooleanField()
-    created = FloatField(default=time.time)
+    time = FloatField(default=0)
     data = CompressedJsonField(default=list)
     unparsed = JSONField(default=list)
-    meta = JSONField(null=True)
+    meta = JSONField(default=dict)
 
 
 class ActiveBattleTurn(BaseModel):
     pk = AutoField()
 
     events = JSONField()
-    meta = JSONField(null=True)
+    meta = JSONField(default=dict)
+    time = FloatField()
 
     battle = ForeignKeyField(Battle, backref="turns")
 

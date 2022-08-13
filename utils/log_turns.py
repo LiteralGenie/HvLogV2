@@ -1,3 +1,4 @@
+import json
 from typing import TypedDict
 from pydantic import BaseModel
 
@@ -7,12 +8,12 @@ from .parse import parse_events
 
 class RawTurnLog(BaseModel):
     lines: list[str]
-    time: int | None
+    time: float
 
 
 class Turn(TypedDict):
     events: list[dict]
-    time: int | None
+    time: float
 
 
 def parse_turns(raw_logs: list[RawTurnLog]) -> tuple[list[Turn], list[str]]:
@@ -87,6 +88,7 @@ def get_active_battle(
                     battle_type=ev["battle_type"],
                     last_round=ev["current"],
                     max_rounds=ev["max"],
+                    time=0,
                 ),
                 battle=active_battle,
             )
@@ -120,8 +122,9 @@ def get_active_battle(
 def log_turns(raw_logs: list[RawTurnLog]):
     """
     Assumptions:
-        -> All turn_logs are for the same battle
+        -> All raw_logs are for the same battle
         -> At least one log starts with a ROUND_START event
+        -> All timestamps are monotonically increasing, for turns within the same battle
     """
 
     from config import paths
@@ -144,15 +147,26 @@ def log_turns(raw_logs: list[RawTurnLog]):
     )
     active_battle, active_report, is_new_battle = get_active_battle(round_start)
     active_battle.unparsed += unparsed
+    active_battle.save()
+
+    if is_new_battle:
+        active_battle.time = turns[0]["time"]
+        active_battle.save()
 
     # Append events to db
     for turn in turns:
         ActiveBattleTurn.create(
-            events=turn["events"], meta=dict(time=turn["time"]), battle=active_battle
+            events=turn["events"],
+            time=turn["time"] - active_battle.time,
+            battle=active_battle,
         )
 
     # Append events to file
     out_file = paths.BATTLE_LOG_DIR / f"{active_battle.pk}.hv"
     with open(out_file, "a") as file:
+        if is_new_battle:
+            battle_data = dict(pk=active_battle.pk, time=active_battle.time)
+            file.write(json.dumps(battle_data) + "\n")
+
         turns = [t.json() for t in raw_logs]
         file.write("\n".join(turns) + "\n")
