@@ -35,6 +35,7 @@ class Battle(BaseModel):
     active = BooleanField()
     created = FloatField(default=time.time)
     data = CompressedJsonField(default=list)
+    unparsed = JSONField(default=list)
     meta = JSONField(null=True)
 
 

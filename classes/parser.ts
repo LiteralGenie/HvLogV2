@@ -210,7 +210,7 @@ export const PARSERS: {[id: string]: EventParser} = {
     ),
     PROFICIENCY: new EventParser(
         'PROFICIENCY',
-        `You gain $${Float('value')} points of ${Words('type')} proficiency\\.`, 
+        `You gain ${Float('value')} points of ${Words('type')} proficiency\\.`, 
         [Number, String]
     ),
     EXPERIENCE: new EventParser(
