@@ -15,11 +15,16 @@ app.add_middleware(
 
 
 @app.post("/logs")
-def post_logs(raw_logs: list[RawTurnLog]):
+async def post_logs(raw_logs: list[RawTurnLog]):
     log_turns(raw_logs)
 
 
 if __name__ == "__main__":
     uvicorn.run(
-        "run_server:app", host="0.0.0.0", port=9999, log_level="debug", reload=True
+        "run_server:app",
+        host="0.0.0.0",
+        port=9999,
+        workers=1,
+        log_level="debug",
+        reload=True,
     )

@@ -1,3 +1,5 @@
+# Features
+
 [x] refactor parser logic
 [~] recreate db from raw logs
 [x] delete and compress when battle becomes inactive
@@ -13,3 +15,9 @@
 [ ] middleware (perf logging)
 [ ] discord rich presence
 [ ] slowest when casting...
+
+---
+
+# Bugs
+
+[ ] Last turn is not recorded
