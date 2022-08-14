@@ -20,4 +20,4 @@
 
 # Bugs
 
-[ ] parser logic should run in background, and not delay response
+[x] parser logic should run in background, and not delay response

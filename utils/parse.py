@@ -189,7 +189,11 @@ def log_turns(raw_logs: list[RawTurnLog]):
             .join(Battle)
             .where(Battle.pk != active_battle.pk)
         )
-        inactive = [Reporters[report.type](report) for report in inactive]
+        inactive = [
+            Reporters[report.type](report)
+            for report in inactive
+            if report.type != "meta"
+        ]
 
         for rptr in inactive:
             rptr.finalize()

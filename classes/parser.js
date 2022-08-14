@@ -78,7 +78,7 @@ exports.PARSERS = {
     GEM: new EventParser('GEM', "".concat(Monster(), " drops a ").concat(Words('type'), " powerup!"), [String, String]),
     CREDITS: new EventParser('CREDITS', "You gain ".concat(Num('value'), " Credits!"), [Number]),
     DROP: new EventParser('DROP', "".concat(Monster(), " dropped \\[").concat(Group('item', '.*'), "\\]"), [String, String]),
-    PROFICIENCY: new EventParser('PROFICIENCY', "You gain ".concat(Float('value'), " points of ").concat(Words('type'), " proficiency\\."), [Number, String]),
+    PROFICIENCY: new EventParser('PROFICIENCY', "You gain ".concat(Float('value'), " points of ").concat(Words('type'), "\\."), [Number, String]),
     EXPERIENCE: new EventParser('EXPERIENCE', "You gain ".concat(Num('value'), " EXP!"), [Number]),
     AUTO_SALVAGE: new EventParser('AUTO_SALVAGE', "A traveling salesmoogle salvages it into ".concat(Num('value'), "x \\[").concat(Words('item'), "\\]"), [Number, String]),
     AUTO_SELL: new EventParser('AUTO_SELL', "A traveling salesmoogle gives you \\[".concat(Num('value'), " Credits\\] for it\\."), [Number]),

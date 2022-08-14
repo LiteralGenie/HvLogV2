@@ -3,11 +3,12 @@ from config import paths
 from peewee import *
 from playhouse.sqlite_ext import JSONField, SqliteExtDatabase
 import uuid
-import zpaq
+import zlib
 
 db = SqliteExtDatabase(paths.DB_FILE)
 
 # import logging
+
 # logger = logging.getLogger("peewee")
 # logger.setLevel(logging.DEBUG)
 # logger.addHandler(logging.StreamHandler())
@@ -15,10 +16,10 @@ db = SqliteExtDatabase(paths.DB_FILE)
 
 class CompressedJsonField(BlobField):
     def db_value(self, value: dict | list):
-        return zpaq.compress(json.dumps(value).encode())
+        return zlib.compress(json.dumps(value).encode())
 
     def python_value(self, value):
-        return json.loads(zpaq.decompress(value))
+        return json.loads(zlib.decompress(value))
 
 
 class BaseModel(Model):

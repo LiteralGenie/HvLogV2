@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 
 from classes.models import ActiveBattleTurn, Battle, BattleReport
@@ -17,14 +17,13 @@ app.add_middleware(
 
 
 @app.post("/logs")
-async def post_logs(raw_logs: list[RawTurnLog]):
-    log_turns(raw_logs)
+async def post_logs(raw_logs: list[RawTurnLog], tasks: BackgroundTasks):
+    tasks.add_task(log_turns, raw_logs)
 
 
 @app.get("/ids")
 def get_ids():
-    battles = Battle.select()
-    pks = [b.pk for b in battles]
+    pks = list(btl.pk for btl in Battle.select(Battle.pk))
     return pks
 
 
@@ -41,9 +40,10 @@ def get_reports(id: str):
 def get_events(id: str):
     battle: Battle = Battle.select().where(Battle.pk == id).first()
 
-    if battle.active:
+    if battle is None:
+        raise HTTPException(404)
+    elif battle.active:
         events = [turn.events for turn in ActiveBattleTurn.select()]
-        print("here", events)
     else:
         events = battle.data
 
