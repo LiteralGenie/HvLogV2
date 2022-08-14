@@ -1,18 +1,16 @@
-import json
-from typing import TypedDict
-from pydantic import BaseModel
+import json5 as json
 
 from classes.models import ActiveBattleTurn, Battle, BattleReport
+from pydantic import BaseModel
+from classes.reporters import Reporters
+
+from classes.types import Turn
+
 from .parse import parse_events
 
 
 class RawTurnLog(BaseModel):
     lines: list[str]
-    time: float
-
-
-class Turn(TypedDict):
-    events: list[dict]
     time: float
 
 
@@ -121,6 +119,8 @@ def get_active_battle(
 
 def log_turns(raw_logs: list[RawTurnLog]):
     """
+    Get or create new Battle. Then add turns to it. Then run Reporter's.
+
     Assumptions:
         -> All raw_logs are for the same battle
         -> At least one log starts with a ROUND_START event
@@ -168,5 +168,25 @@ def log_turns(raw_logs: list[RawTurnLog]):
             battle_data = dict(pk=active_battle.pk, time=active_battle.time)
             file.write(json.dumps(battle_data) + "\n")
 
-        turns = [t.json() for t in raw_logs]
-        file.write("\n".join(turns) + "\n")
+        result = [t.json() for t in raw_logs]
+        file.write("\n".join(result) + "\n")
+
+    # Update reporters
+    for cls in Reporters.values():
+        rptr = cls.get(active_battle) or cls.create(active_battle)
+
+        for turn in turns:
+            rptr.next_turn(turn)
+
+    # Finalize old reporters
+    if is_new_battle:
+        inactive = (
+            BattleReport.select()
+            .where(BattleReport.finalized == False)
+            .join(Battle)
+            .where(Battle.pk != active_battle.pk)
+        )
+        inactive = [Reporters[report.type](report) for report in inactive]
+
+        for rptr in inactive:
+            rptr.finalize()

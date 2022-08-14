@@ -195,7 +195,7 @@ export const PARSERS: {[id: string]: EventParser} = {
 
     GEM: new EventParser(
         'GEM',
-        `${Monster()} drops a ${Word('type')} Gem powerup!`, 
+        `${Monster()} drops a ${Words('type')} powerup!`, 
         [String, String]
     ),
     CREDITS: new EventParser(

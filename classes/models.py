@@ -1,4 +1,5 @@
-import json
+from email.policy import default
+import json5 as json
 from config import paths
 from peewee import *
 from playhouse.sqlite_ext import JSONField, SqliteExtDatabase
@@ -49,8 +50,10 @@ class ActiveBattleTurn(BaseModel):
 class BattleReport(BaseModel):
     pk = AutoField()
 
+    data = JSONField(default=dict)
+    finalized = BooleanField(default=False)
+    state = JSONField(default=dict)
     type = CharField()
-    data = JSONField()
 
     battle = ForeignKeyField(Battle, backref="reports")
 

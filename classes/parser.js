@@ -75,7 +75,7 @@ exports.PARSERS = {
     SPAWN: new EventParser('SPAWN', "Spawned Monster ".concat(Group('letter', '[A-Z]'), ": MID=").concat(Num('mid'), " \\(").concat(Monster(), "\\) LV=").concat(Num('level'), " HP=").concat(Num('hp')), [String, Number, String, Number, Number]),
     DEATH: new EventParser('DEATH', "".concat(Monster(), " has been defeated\\."), [String]),
     RIDDLE_MASTER: new EventParser('RIDDLE_MASTER', "The Riddlemaster listens.*", []),
-    GEM: new EventParser('GEM', "".concat(Monster(), " drops a ").concat(Word('type'), " Gem powerup!"), [String, String]),
+    GEM: new EventParser('GEM', "".concat(Monster(), " drops a ").concat(Words('type'), " powerup!"), [String, String]),
     CREDITS: new EventParser('CREDITS', "You gain ".concat(Num('value'), " Credits!"), [Number]),
     DROP: new EventParser('DROP', "".concat(Monster(), " dropped \\[").concat(Group('item', '.*'), "\\]"), [String, String]),
     PROFICIENCY: new EventParser('PROFICIENCY', "You gain ".concat(Float('value'), " points of ").concat(Words('type'), " proficiency\\."), [Number, String]),

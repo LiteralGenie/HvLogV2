@@ -1,11 +1,11 @@
 # Features
 
 [x] refactor parser logic
-[~] recreate db from raw logs
+[ ] recreate db from raw logs
 [x] delete and compress when battle becomes inactive
 
-[ ] reporter abc
-[ ] concrete reporters
+[x] reporter abc
+[~] concrete reporters
 [ ] aggregate stats
 
 [ ] data endpoints
@@ -19,5 +19,3 @@
 ---
 
 # Bugs
-
-[ ] Last turn is not recorded
