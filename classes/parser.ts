@@ -253,11 +253,13 @@ export const PARSERS: {[id: string]: EventParser} = {
 
 export function parse_events(lines: string[]) {
     const ps = Object.values(PARSERS)
-    return lines.map(l => {
+    const result = lines.map(l => {
         for(let parser of ps) {
             const result = parser.parse(l)
             if (result) return result
         }
         return null
     })
+
+    return JSON.stringify(result)
 }

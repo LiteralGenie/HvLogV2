@@ -1,6 +1,5 @@
 fastapi
 javascript
-json5
 peewee
 pyzpaq
 uvicorn

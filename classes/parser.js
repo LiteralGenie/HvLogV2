@@ -89,14 +89,15 @@ exports.PARSERS = {
 };
 function parse_events(lines) {
     var ps = Object.values(exports.PARSERS);
-    return lines.map(function (l) {
+    var result = lines.map(function (l) {
         for (var _i = 0, ps_1 = ps; _i < ps_1.length; _i++) {
             var parser = ps_1[_i];
-            var result = parser.parse(l);
-            if (result)
-                return result;
+            var result_1 = parser.parse(l);
+            if (result_1)
+                return result_1;
         }
         return null;
     });
+    return JSON.stringify(result);
 }
 exports.parse_events = parse_events;

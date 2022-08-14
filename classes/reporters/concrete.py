@@ -23,7 +23,7 @@ class TotalGains(Reporter):
                         add(ev["item"], 1)
                 case "GEM":
                     add(ev["type"], 1)
-                case "CREDITS" | "AUTO_SELL":
+                case "CREDITS":
                     add("Credits", ev["value"])
                 case "PROFICIENCY":
                     add(ev["type"], ev["value"])
@@ -31,10 +31,10 @@ class TotalGains(Reporter):
                     add("Experience", ev["value"])
                 case "AUTO_SALVAGE":
                     add(ev["item"], ev["value"])
+                case "CREDITS" | "AUTO_SELL":
+                    add("Salvage Credits", ev["value"])
                 case "TOKEN_BONUS" | "EVENT_ITEM":
                     add(ev["item"], 1)
-
-        self.report.save()
 
 
 class Time(Reporter):

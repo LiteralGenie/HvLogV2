@@ -62,3 +62,6 @@ class Reporter:
     def create(cls, battle: Battle) -> "Reporter":
         report = BattleReport.create(type=cls.type, battle=battle)
         return cls(report)
+
+    def save(self):
+        self.report.save()

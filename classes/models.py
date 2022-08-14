@@ -1,5 +1,4 @@
-from email.policy import default
-import json5 as json
+import json
 from config import paths
 from peewee import *
 from playhouse.sqlite_ext import JSONField, SqliteExtDatabase
